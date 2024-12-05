@@ -1,37 +1,36 @@
 package com.example.brewquest
 
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.brewquest.ui.theme.BrewQuestTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 import kotlin.random.Random
-import kotlin.random.nextLong
+
+
 
 //Interval between games
-fun randomInterval(): Long = Random.nextLong(1000,3000)
+fun randomInterval(): Long = Random.nextLong(1000,1500)
 
 fun getRandomMinigame(): String {
     Log.d("StateDebug", "Getting next game")
@@ -45,24 +44,33 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BrewQuestTheme {
-                AppNavigation()
+                AppContent()
             }
         }
     }
 }
 
+@Composable
+fun AppContent(){
+    Box(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+    ){
+        AppNavigation()
+    }
+}
+
 // Home screen that shows the Welcome message and start brewing button
 @Composable
-fun WelcomeScreen(onStartClicked: () -> Unit, modifier: Modifier = Modifier) {
+fun WelcomeScreen(onStartClicked: () -> Unit) {
     Log.d("ColorCheck", "Primary color: ${MaterialTheme.colorScheme.primary}")
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Welcome to BrewQuest!", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onStartClicked) {
+        Text("BrewQuest", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(200.dp))
+        Button(onClick = onStartClicked, modifier = Modifier.size(width = 200.dp, height = 60.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary)) {
             Text("Start Brewing")
         }
     }
@@ -73,12 +81,13 @@ fun WelcomeScreen(onStartClicked: () -> Unit, modifier: Modifier = Modifier) {
 fun BrewingScreen(onGameOver: () -> Unit) {
     var currentMinigame by remember { mutableStateOf(getRandomMinigame()) }
     var isGameActive by remember { mutableStateOf(true) }
-    var gameKey by remember { mutableStateOf(0) }
+    var showResult by remember { mutableStateOf(false) }
+    var gameResult by remember { mutableStateOf(false) }
 
     LaunchedEffect(isGameActive) {
-        Log.d("StateDebug", "currentMinigame: $currentMinigame, isGameActive: $isGameActive, gameKey: $gameKey")
+        Log.d("StateDebug", "currentMinigame: $currentMinigame, isGameActive: $isGameActive")
         if (!isGameActive) {
-            kotlinx.coroutines.delay(randomInterval())//wait for the interval
+            kotlinx.coroutines.delay(randomInterval())
             currentMinigame = getRandomMinigame()
             isGameActive = true
         }
@@ -90,25 +99,38 @@ fun BrewingScreen(onGameOver: () -> Unit) {
         verticalArrangement = Arrangement.Top
     ) {
         Text("The coffee is brewing!")
-        if (isGameActive) {
+        if (showResult) {
+            ResultScreen(
+                success = gameResult,
+                onNextGame = {
+                    showResult = false
+                    isGameActive = true
+                },
+                onGameOver = onGameOver
+            )
+        } else if (isGameActive) {
             when (currentMinigame) {
                 "TappingGame" -> TappingGame(
                     onGameOver = {
+                        gameResult = false
+                        showResult = true
                         isGameActive = false
-                        onGameOver()
                     },
                     onNextGame = {
-                        currentMinigame = getRandomMinigame()
+                        gameResult = true
+                        showResult = true
                         isGameActive = false
                     }
                 )
                 "SwipeGame" -> SwipeGame(
                     onGameOver = {
+                        gameResult = false
+                        showResult = true
                         isGameActive = false
-                        onGameOver()
                     },
                     onNextGame = {
-                        currentMinigame = getRandomMinigame()
+                        gameResult = true
+                        showResult = true
                         isGameActive = false
                     }
                 )
@@ -129,13 +151,12 @@ fun AppNavigation() {
     }
 }
 
-//Tapping mini game
+//Tapping minigame
 @Composable
 fun TappingGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
     var tapCount by remember { mutableIntStateOf(0) }
     var timeRemaining by remember { mutableIntStateOf(3)}
     var gameOver by remember { mutableStateOf(false) }
-    var showSuccessMessage by remember { mutableStateOf(false) }
 
     LaunchedEffect(timeRemaining) {
         if (timeRemaining > 0 && !gameOver) {
@@ -147,8 +168,6 @@ fun TappingGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
     LaunchedEffect(tapCount) {
         if (tapCount >= 10 && !gameOver) {
             gameOver = true
-            showSuccessMessage = true
-            delay(1000)
             onNextGame()
         }
     }
@@ -156,8 +175,6 @@ fun TappingGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
     LaunchedEffect(timeRemaining) {
         if (timeRemaining == 0 && tapCount < 10 && !gameOver) {
             gameOver = true
-            showSuccessMessage = false
-            delay(1000)
             onGameOver()
         }
     }
@@ -170,43 +187,36 @@ fun TappingGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
         Text("$timeRemaining seconds", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(16.dp))
         Text("Taps: $tapCount", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(16.dp))
-        if(gameOver){
-            if (showSuccessMessage) {
-                Text(
-                    "Good job!",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.Green
-                )
-            } else {
-                Text(
-                    "You Lose!",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.Red
-                )
-            }
-        }
     }
 }
 
+//Swipe minigame
 @Composable
 fun SwipeGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
     val directions = listOf("Left", "Right", "Up", "Down")
     val targetDirection = remember { directions.random() }
-    var gameOver by remember {mutableStateOf(false)}
+    var gameOver by remember { mutableStateOf(false) }
+    var timeRemaining by remember { mutableIntStateOf(1) }
     var swipeMatched by remember { mutableStateOf(false) }
-    var showSuccessMessage by remember { mutableStateOf(false) }
+
+    LaunchedEffect(timeRemaining) {
+        if (timeRemaining > 0 && !gameOver) {
+            delay(1000)
+            timeRemaining--
+        }
+    }
 
     LaunchedEffect(Unit) {
-        delay(3000)
-        gameOver = true
+        delay(1000)
+        if (!swipeMatched) {
+            gameOver = true
+            onGameOver()
+        }
     }
 
     LaunchedEffect(gameOver) {
         if (gameOver) {
             if (swipeMatched) {
-                showSuccessMessage = true
-                delay(1000)
                 onNextGame()
             } else {
                 onGameOver()
@@ -214,10 +224,11 @@ fun SwipeGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize().pointerInput(Unit){
-            detectDragGestures { change, dragAmount -> change.consume()
-                val (x,y) = dragAmount
+    Column(
+        modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+            detectDragGestures { change, dragAmount ->
+                change.consume()
+                val (x, y) = dragAmount
                 val direction = when {
                     x > 50 && x > kotlin.math.abs(y) -> "Right"
                     x < -50 && kotlin.math.abs(x) > kotlin.math.abs(y) -> "Left"
@@ -225,35 +236,48 @@ fun SwipeGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
                     y < -50 && kotlin.math.abs(y) > kotlin.math.abs(x) -> "Up"
                     else -> null
                 }
-                if (direction == targetDirection){
+                if (direction == targetDirection) {
                     swipeMatched = true
                     gameOver = true
                 }
             }
-        }
-    ){
-        if (showSuccessMessage) {
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Good Job!",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.Green
-                )
-            }
-        } else {
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Swipe $targetDirection!",
-                    style = MaterialTheme.typography.headlineLarge
-                )
-            }
+        },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        if (!gameOver) {
+            Text(
+                "$timeRemaining seconds",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text("Swipe $targetDirection!", style = MaterialTheme.typography.headlineLarge)
         }
     }
 }
+
+@Composable
+fun ResultScreen(success: Boolean, onNextGame: () -> Unit, onGameOver: () -> Unit) {
+    val message = if (success) "Keep Brewing!" else "You Failed!"
+    val color = if (success) Color.Green else Color.Red
+
+    LaunchedEffect(Unit) {
+        delay(2000)
+        if (success) {
+            onNextGame()
+        } else {
+            onGameOver()
+        }
+    }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(message, style = MaterialTheme.typography.headlineLarge, color = color)
+    }
+}
+
+
+
+
 
