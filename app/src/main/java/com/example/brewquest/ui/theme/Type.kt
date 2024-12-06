@@ -29,13 +29,13 @@ val Typography = Typography(
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Cursive,
         fontWeight = FontWeight.Normal,
-        fontSize = 60.sp,
+        fontSize = 50.sp,
         lineHeight = 40.sp
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.Cursive,
         fontWeight = FontWeight.Normal,
-        fontSize = 28.sp,
+        fontSize = 30.sp,
         lineHeight = 36.sp
     ),
     headlineSmall = TextStyle(

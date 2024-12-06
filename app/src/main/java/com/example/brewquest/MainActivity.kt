@@ -1,5 +1,6 @@
 package com.example.brewquest
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -26,7 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 import kotlin.random.Random
-
+import android.os.VibrationEffect
+import android.os.Vibrator
+import androidx.compose.ui.platform.LocalContext
 
 
 //Interval between games
@@ -34,7 +37,7 @@ fun randomInterval(): Long = Random.nextLong(1000,1500)
 
 fun getRandomMinigame(): String {
     Log.d("StateDebug", "Getting next game")
-    val minigames = listOf("TappingGame", "SwipeGame")
+    val minigames = listOf("TappingGame", "SwipeGame", "VibrateGame")
     return minigames.random()
 }
 
@@ -62,7 +65,6 @@ fun AppContent(){
 // Home screen that shows the Welcome message and start brewing button
 @Composable
 fun WelcomeScreen(onStartClicked: () -> Unit) {
-    Log.d("ColorCheck", "Primary color: ${MaterialTheme.colorScheme.primary}")
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -94,11 +96,11 @@ fun BrewingScreen(onGameOver: () -> Unit) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(25.dp),
+        modifier = Modifier.fillMaxSize().padding(64.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        Text("The coffee is brewing!")
+        Text("The coffee is brewing!", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
         if (showResult) {
             ResultScreen(
                 success = gameResult,
@@ -123,6 +125,18 @@ fun BrewingScreen(onGameOver: () -> Unit) {
                     }
                 )
                 "SwipeGame" -> SwipeGame(
+                    onGameOver = {
+                        gameResult = false
+                        showResult = true
+                        isGameActive = false
+                    },
+                    onNextGame = {
+                        gameResult = true
+                        showResult = true
+                        isGameActive = false
+                    }
+                )
+                "VibrateGame" -> VibrateGame(
                     onGameOver = {
                         gameResult = false
                         showResult = true
@@ -243,7 +257,7 @@ fun SwipeGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
             }
         },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
         if (!gameOver) {
             Text(
@@ -251,7 +265,56 @@ fun SwipeGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary
             )
-            Text("Swipe $targetDirection!", style = MaterialTheme.typography.headlineLarge)
+            Text("Swipe $targetDirection!", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+fun VibrateGame(onGameOver: () -> Unit, onNextGame: () -> Unit){
+    var vibrated by remember { mutableStateOf(false) }
+    var gameOver by remember { mutableStateOf(false) }
+    var tapTime by remember { mutableLongStateOf(0) }
+    val requiredTime by remember { mutableLongStateOf(1000) }
+    var canTap by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(Random.nextLong(1000, 3000))
+        vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+        vibrated = true
+        tapTime = System.currentTimeMillis()
+        kotlinx.coroutines.delay(requiredTime)
+        canTap = true
+        if (!gameOver) {
+            gameOver = true
+            onGameOver()
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize().clickable {
+                if (vibrated && !gameOver) {
+                    val currentTime = System.currentTimeMillis()
+
+                        if (currentTime - tapTime <= requiredTime) {
+                            gameOver = true
+                            onNextGame()
+                        } else {
+                            gameOver = true
+                            onGameOver()
+                        }
+                } else if (!canTap) {
+                    gameOver = true
+                    onGameOver()
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        if (!gameOver) {
+            Text(text = if (vibrated) "!!!" else "Wait...",  style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
