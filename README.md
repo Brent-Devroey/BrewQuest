@@ -2,6 +2,14 @@
 <p>
   BrewQuest is a project created to learn and explore working with Kotlin and Jetpack Compose using Android Studio.
 </p>
+<h2>Features</h2>
+
+<ul>
+  <li><strong>Random Minigames:</strong> Minigames appear randomly, creating a dynamic experience for the user.</li>
+  <li><strong>Challenging Gameplay:</strong> The game continues until the user fails, testing their skills and reflexes.</li>
+  <li><strong>Vibration Feedback:</strong> The app utilizes the Vibrator API inside the game.</li>
+  <li><strong>Gesture Detection:</strong> Built with the Gesture Detection API, the app can detect touch gestures.</li>
+</ul>
 
 <h2>Technologies Used</h2>
 <ul>
